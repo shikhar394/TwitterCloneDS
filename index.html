@@ -1,3 +1,4 @@
+<html>
 <h1 style="text-align: center"> TWITTER CLONE </h1><br/>
 <form id="loginForm" method="post">
   <table style="border: black double 10px; margin: auto; vertical-align: central">
@@ -19,6 +20,11 @@
                           <br></td>
       <td><button id="j_idt5:j_idt11" style="border-radius: 30px; background-color: black; color: white;" type="submit" role="button" aria-disabled="false"><span>Login</span></button></td>
       </tr>
+      {{if .Authfail}}
+      <tr>
+        <td><h3>Error in Authentication</h3></td>
+      </tr>
+      {{end}}
       <tr>
       <td>
                           <h3>New User? </h3></td>
@@ -30,3 +36,4 @@
     </tbody>
   </table>
 </form>
+</html>
