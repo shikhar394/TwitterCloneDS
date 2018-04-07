@@ -13,6 +13,7 @@ type User struct {
 	FirstName string
 	LastName  string
 	Password  string
+	PosInList *list.Element
 }
 
 // TODO make maps pointing with email bool || pointer to node for constant lookups
@@ -26,13 +27,45 @@ var UserList = list.New() // Only for distributing among servers while making di
 
 func main() {
 	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/cancel", cancelHandler)
+	http.HandleFunc("/goodbye", goodbyeHandler)
 	http.HandleFunc("/signup", signupHandler)
 	http.HandleFunc("/home", homeHandler)
 	http.ListenAndServe(":8000", nil)
 }
 
+func goodbyeHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("goodbye.html"))
+	if r.Method != http.MethodPost {
+		tmpl.Execute(w, nil)
+		return
+	}
+}
+
+func cancelHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("cancel.html"))
+	if r.Method != http.MethodPost {
+		tmpl.Execute(w, nil)
+		return
+	}
+	userEmail := r.FormValue("email")
+	userPassword := r.FormValue("password")
+	User, ok := UserMap[userEmail]
+	if ok {
+		if User.Password == userPassword {
+			UserList.Remove(User.PosInList)
+			delete(UserMap, userEmail)
+			readUsers()
+			http.Redirect(w, r, "/goodbye", 302)
+			return
+		}
+	}
+	tmpl.Execute(w, struct{ Authfail bool }{true})
+	readUsers()
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("index.html"))
+	tmpl := template.Must(template.ParseFiles("login.html"))
 	if r.Method != http.MethodPost {
 		tmpl.Execute(w, nil)
 		return
@@ -57,20 +90,18 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func sortedInsert(newUser *User) {
+func sortedInsert(newUser *User) *list.Element {
 	//fmt.Printf("\n\nSorted insert on email %v\n\n", newUser.Email)
 	if UserList.Front() != nil {
 		for CurrentUser := UserList.Front(); CurrentUser != nil; CurrentUser = CurrentUser.Next() {
 			if strings.Compare(CurrentUser.Value.(*User).Email, (*newUser).Email) == 1 {
-				UserList.InsertBefore(newUser, CurrentUser)
-				return
+				return UserList.InsertBefore(newUser, CurrentUser)
 			}
 		}
 	} else {
-		UserList.PushFront(newUser)
-		return
+		return UserList.PushFront(newUser)
 	}
-	UserList.PushBack(newUser)
+	return UserList.PushBack(newUser)
 	//fmt.Printf("\n\nDone inserting\n\n")
 }
 
@@ -94,7 +125,8 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 	newUser.Password = r.FormValue("new_password")
 
 	//Users.PushBack(newUser) // TODO Make sorted instead and store in map for constant time lookup
-	sortedInsert(newUser)
+	UserElementList := sortedInsert(newUser)
+	newUser.PosInList = UserElementList
 	UserMap[(newUser).Email] = newUser
 	readUsers()
 	fmt.Print(UserList.Front().Value.(*User).FirstName)
