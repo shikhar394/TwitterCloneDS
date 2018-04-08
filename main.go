@@ -48,10 +48,10 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 		tmpl.Execute(w, nil)
 		return
 	}
-	userEmail := r.FormValue("email")
-	userPassword := r.FormValue("password")
-	User, ok := UserMap[userEmail]
-	if ok {
+	userEmail := r.FormValue("cancel_email")
+	userPassword := r.FormValue("cancel_password")
+	User, Ok := UserMap[userEmail]
+	if Ok {
 		if User.Password == userPassword {
 			UserList.Remove(User.PosInList)
 			delete(UserMap, userEmail)
@@ -60,7 +60,7 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	tmpl.Execute(w, struct{ Authfail bool }{true})
+	tmpl.Execute(w, struct{ NotFound bool }{true})
 	readUsers()
 }
 

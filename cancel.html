@@ -1,6 +1,13 @@
+{{if .NotFound}}
+<html>
+<body>
+<h3>Account Not Found in records</h3>
+</body>
+</html>
+{{end}}
 <html>
 <h1 style="text-align: center"> TWITTER CLONE </h1><br/>
-<form id="loginForm" method="post">
+<form id="cancelForm" method="post">
   <table style="border: black double 10px; margin: auto; vertical-align: central">
     <thead>
       <tr><th colspan="2" scope="colgroup">
@@ -9,22 +16,17 @@
     <tbody>
       <tr>
       <td><label for="j_idt5:email">Email: <span>*</span></label></td>
-      <td><input id="j_idt5:email" name="email" type="text" style="border-radius: 20px;" role="textbox" aria-disabled="false" aria-readonly="false" required></td>
+      <td><input id="j_idt5:email" name="cancel_email" type="text" style="border-radius: 20px;" role="textbox" aria-disabled="false" aria-readonly="false" required></td>
       </tr>
       <tr>
       <td><label for="j_idt5:password">Password: <span>*</span></label></td>
-      <td><input id="j_idt5:password" name="password" type="password" style="border-radius: 20px;" role="textbox" aria-disabled="false" aria-readonly="false" required></td>
+      <td><input id="j_idt5:password" name="cancel_password" type="password" style="border-radius: 20px;" role="textbox" aria-disabled="false" aria-readonly="false" required></td>
       </tr>
       <tr>
       <td>
                           <br></td>
-      <td><button id="j_idt5:j_idt11" style="border-radius: 30px; background-color: black; color: white;" type="submit" role="button" aria-disabled="false"><span>Login</span></button></td>
+      <td><button id="j_idt5:j_idt11" style="border-radius: 30px; background-color: black; color: white;" type="submit" role="button" aria-disabled="false"><span>Delete Account</span></button></td>
       </tr>
-      {{if .Authfail}}
-      <tr>
-        <td><h3>Error in Authentication</h3></td>
-      </tr>
-      {{end}}
       <td> </td>
       </tr>
     </tbody>
