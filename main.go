@@ -2,7 +2,6 @@ package main
 
 import (
 	"container/list"
-	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
@@ -55,13 +54,13 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 		if User.Password == userPassword {
 			UserList.Remove(User.PosInList)
 			delete(UserMap, userEmail)
-			readUsers()
+			//readUsers()
 			http.Redirect(w, r, "/goodbye", 302)
 			return
 		}
 	}
 	tmpl.Execute(w, struct{ Authfail bool }{true})
-	readUsers()
+	//readUsers()
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +85,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	//If no user found
 	tmpl.Execute(w, struct{ Authfail bool }{true})
 
-	fmt.Print(userEmail + " : " + userPassword + "\n")
+	//fmt.Print(userEmail + " : " + userPassword + "\n")
 
 }
 
@@ -105,11 +104,11 @@ func sortedInsert(newUser *User) *list.Element {
 	//fmt.Printf("\n\nDone inserting\n\n")
 }
 
-func readUsers() {
-	for CurrentUser := UserList.Front(); CurrentUser != nil; CurrentUser = CurrentUser.Next() {
-		fmt.Printf("User %v, Password %v\n", CurrentUser.Value.(*User).Email, CurrentUser.Value.(*User).Password)
-	}
-}
+// func readUsers() {
+// 	for CurrentUser := UserList.Front(); CurrentUser != nil; CurrentUser = CurrentUser.Next() {
+// 		fmt.Printf("User %v, Password %v\n", CurrentUser.Value.(*User).Email, CurrentUser.Value.(*User).Password)
+// 	}
+// }
 
 func signupHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("signUp.html"))
@@ -130,12 +129,19 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		UserElementList := sortedInsert(newUser)
 		newUser.PosInList = UserElementList
 		UserMap[(newUser).Email] = newUser
-		readUsers()
-		fmt.Print(UserList.Front().Value.(*User).FirstName)
-		tmpl.Execute(w, struct{ Success bool }{true})
+		//readUsers()
+		//fmt.Print(UserList.Front().Value.(*User).FirstName)
+		tmpl.Execute(w, struct {
+			Success          bool
+			DuplicateAccount bool
+		}{Success: true, DuplicateAccount: false})
+		return
 	} else {
 		//tmpl.Execute(w, struct{ Success bool }{false})
-		tmpl.Execute(w, struct{ DuplicateAccount bool }{true})
+		tmpl.Execute(w, struct {
+			Success          bool
+			DuplicateAccount bool
+		}{Success: false, DuplicateAccount: true})
 	}
 
 }

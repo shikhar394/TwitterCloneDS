@@ -1,16 +1,3 @@
-{{if .Success}}
-<html>
-<h1>CONGRATS! ACCOUNT HAS BEEN CREATED. <a href="/">LOGIN.. </a></h1>
-</html>
-{{end}}
-
-{{if .DuplicateAccount}}
-<html>
-<body>
-<h1>Duplicate Account. Try again. <a href="/signup">Signup again. </a></h1>
-</body>
-</html>
-{{end}}
 
 <html>
 <body>
@@ -41,6 +28,11 @@
     <td>
                         <br></td>
     <td><button  style="border-radius: 30px; background-color: black; color: white;" type="submit" role="button" aria-disabled="false"><span class="ui-button-text ui-c">Signup</span></button></td>
+    {{if .DuplicateAccount}}
+    <h1>Duplicate Account. Try again. <a href="/signup">Signup again. </a></h1>
+    {{else if .Success}}
+    <h1>CONGRATS! ACCOUNT HAS BEEN CREATED. <a href="/">LOGIN.. </a></h1>
+    {{end}}
     </tr>
   </tbody>
 </table>
