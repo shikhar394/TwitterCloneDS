@@ -125,12 +125,18 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 	newUser.Password = r.FormValue("new_password")
 
 	//Users.PushBack(newUser) // TODO Make sorted instead and store in map for constant time lookup
-	UserElementList := sortedInsert(newUser)
-	newUser.PosInList = UserElementList
-	UserMap[(newUser).Email] = newUser
-	readUsers()
-	fmt.Print(UserList.Front().Value.(*User).FirstName)
-	tmpl.Execute(w, struct{ Success bool }{true})
+	_, ok := UserMap[newUser.Email]
+	if !ok {
+		UserElementList := sortedInsert(newUser)
+		newUser.PosInList = UserElementList
+		UserMap[(newUser).Email] = newUser
+		readUsers()
+		fmt.Print(UserList.Front().Value.(*User).FirstName)
+		tmpl.Execute(w, struct{ Success bool }{true})
+	} else {
+		//tmpl.Execute(w, struct{ Success bool }{false})
+		tmpl.Execute(w, struct{ DuplicateAccount bool }{true})
+	}
 
 }
 

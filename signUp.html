@@ -2,7 +2,16 @@
 <html>
 <h1>CONGRATS! ACCOUNT HAS BEEN CREATED. <a href="/">LOGIN.. </a></h1>
 </html>
-{{else}}
+{{end}}
+
+{{if .DuplicateAccount}}
+<html>
+<body>
+<h1>Duplicate Account. Try again. <a href="/signup">Signup again. </a></h1>
+</body>
+</html>
+{{end}}
+
 <html>
 <body>
 <form id="signupForm" method="post" action="/signup">
@@ -38,4 +47,3 @@
 </form>
 </body>
 </html>
-{{end}}
