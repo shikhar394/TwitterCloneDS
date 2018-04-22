@@ -1,36 +1,27 @@
 package main
 
 import (
-	"container/list"
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
-	"strings"
-)
 
-type User struct {
-	Email     string
-	FirstName string
-	LastName  string
-	Password  string
-	PosInList *list.Element
-}
+	"github.com/gorilla/mux"
+)
 
 // TODO make maps pointing with email bool || pointer to node for constant lookups
 
-var Email string
-
-var UserMap = make(map[string]*User)
-
-var UserList = list.New() // Only for distributing among servers while making distributed.
-//Users := make(map[Emai])
-
 func main() {
-	http.HandleFunc("/", loginHandler)
-	http.HandleFunc("/cancel", cancelHandler)
-	http.HandleFunc("/goodbye", goodbyeHandler)
-	http.HandleFunc("/signup", signupHandler)
-	http.HandleFunc("/home", homeHandler)
-	http.ListenAndServe(":8000", nil)
+	router := mux.NewRouter()
+	router.HandleFunc("/", loginHandler)
+	router.HandleFunc("/cancel", cancelHandler)
+	router.HandleFunc("/goodbye", goodbyeHandler)
+	router.HandleFunc("/signup", signupHandler)
+	router.HandleFunc("/home/{id}", homeHandler)
+	router.HandleFunc("/home/{id}/tweet", createTweetHandler)
+	http.ListenAndServe(":8000", router)
 }
 
 func goodbyeHandler(w http.ResponseWriter, r *http.Request) {
@@ -47,20 +38,23 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 		tmpl.Execute(w, nil)
 		return
 	}
-	userEmail := r.FormValue("email")
-	userPassword := r.FormValue("password")
-	User, ok := UserMap[userEmail]
-	if ok {
-		if User.Password == userPassword {
-			UserList.Remove(User.PosInList)
-			delete(UserMap, userEmail)
-			//readUsers()
-			http.Redirect(w, r, "/goodbye", 302)
-			return
+	// send rest api req to cancel the account
+	jsonData := map[string]string{"email": r.FormValue("email"), "password": r.FormValue("password")}
+	jsonValue, _ := json.Marshal(jsonData)
+	response, err := http.Post("http://localhost:9000/cancel", "application/json", bytes.NewBuffer(jsonValue))
+	if err == nil {
+		body, e := ioutil.ReadAll(response.Body)
+		if e == nil {
+			var data map[string]bool
+			json.Unmarshal(body, &data)
+			if data["Success"] == true {
+				http.Redirect(w, r, "/goodbye", 302)
+				return
+			} else {
+				tmpl.Execute(w, struct{ Authfail bool }{true})
+			}
 		}
 	}
-	tmpl.Execute(w, struct{ Authfail bool }{true})
-	//readUsers()
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,45 +64,26 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userEmail := r.FormValue("email")
-	userPassword := r.FormValue("password")
-
-	// Check if user is in the map keying using the email.
-	User, ok := UserMap[userEmail]
-	if ok {
-		if User.Password == userPassword {
-			http.Redirect(w, r, "/home", 302)
-			return
-		}
-	}
-
-	//If no user found
-	tmpl.Execute(w, struct{ Authfail bool }{true})
-
-	//fmt.Print(userEmail + " : " + userPassword + "\n")
-
-}
-
-func sortedInsert(newUser *User) *list.Element {
-	//fmt.Printf("\n\nSorted insert on email %v\n\n", newUser.Email)
-	if UserList.Front() != nil {
-		for CurrentUser := UserList.Front(); CurrentUser != nil; CurrentUser = CurrentUser.Next() {
-			if strings.Compare(CurrentUser.Value.(*User).Email, (*newUser).Email) == 1 {
-				return UserList.InsertBefore(newUser, CurrentUser)
+	// Call rest api to check authentication. send user email and password and get response
+	jsonData := map[string]string{"email": r.FormValue("email"), "password": r.FormValue("password")}
+	jsonValue, _ := json.Marshal(jsonData)
+	response, err := http.Post("http://localhost:9000/login", "application/json", bytes.NewBuffer(jsonValue))
+	if err == nil {
+		body, e := ioutil.ReadAll(response.Body)
+		if e == nil {
+			var data map[string]bool
+			json.Unmarshal(body, &data)
+			if data["Success"] == true {
+				homeURL := "/home/" + r.FormValue("email")
+				http.Redirect(w, r, homeURL, 302)
+				return
+			} else {
+				tmpl.Execute(w, struct{ Authfail bool }{true})
 			}
 		}
-	} else {
-		return UserList.PushFront(newUser)
 	}
-	return UserList.PushBack(newUser)
-	//fmt.Printf("\n\nDone inserting\n\n")
-}
 
-// func readUsers() {
-// 	for CurrentUser := UserList.Front(); CurrentUser != nil; CurrentUser = CurrentUser.Next() {
-// 		fmt.Printf("User %v, Password %v\n", CurrentUser.Value.(*User).Email, CurrentUser.Value.(*User).Password)
-// 	}
-// }
+}
 
 func signupHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("signUp.html"))
@@ -117,39 +92,87 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUser := new(User)
-	newUser.Email = r.FormValue("new_email")
-	newUser.FirstName = r.FormValue("new_fname")
-	newUser.LastName = r.FormValue("new_lname")
-	newUser.Password = r.FormValue("new_password")
-
-	//Users.PushBack(newUser) // TODO Make sorted instead and store in map for constant time lookup
-	_, ok := UserMap[newUser.Email]
-	if !ok {
-		UserElementList := sortedInsert(newUser)
-		newUser.PosInList = UserElementList
-		UserMap[(newUser).Email] = newUser
-		//readUsers()
-		//fmt.Print(UserList.Front().Value.(*User).FirstName)
-		tmpl.Execute(w, struct {
-			Success          bool
-			DuplicateAccount bool
-		}{Success: true, DuplicateAccount: false})
-		return
-	} else {
-		//tmpl.Execute(w, struct{ Success bool }{false})
-		tmpl.Execute(w, struct {
-			Success          bool
-			DuplicateAccount bool
-		}{Success: false, DuplicateAccount: true})
+	jsonData := map[string]string{"Email": r.FormValue("new_email"), "FirstName": r.FormValue("new_fname"),
+		"LastName": r.FormValue("new_lname"), "Password": r.FormValue("new_password")}
+	jsonValue, _ := json.Marshal(jsonData)
+	response, err := http.Post("http://localhost:9000/signup", "application/json", bytes.NewBuffer(jsonValue))
+	if err == nil {
+		body, e := ioutil.ReadAll(response.Body)
+		if e == nil {
+			var data map[string]bool
+			json.Unmarshal(body, &data)
+			fmt.Print(data)
+			tmpl.Execute(w, struct {
+				Success          bool
+				DuplicateAccount bool
+			}{Success: data["Success"], DuplicateAccount: data["DuplicateAccount"]})
+			return
+		}
 	}
-
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("home.html"))
 	if r.Method != http.MethodPost {
+		//get email from URL so that we can request rest to give tweets for all other users except this one
+		vars := mux.Vars(r)
+		userSignedIn := vars["id"]
+		//send post req to rest API to get a list of tweets to show
+		jsonData := map[string]string{"userId": userSignedIn}
+		jsonValue, _ := json.Marshal(jsonData)
+		response, err := http.Post("http://localhost:9000/showTweets", "application/json", bytes.NewBuffer(jsonValue))
+		//response from API
+		if err == nil {
+			body, e := ioutil.ReadAll(response.Body)
+			if e == nil {
+				//define tweet struct to get jsonData
+				type tweets struct {
+					Email string `json:"userId,omitempty"`
+					Tweet string `json:"userTweet,omitempty"`
+				}
+
+				var data []tweets
+				json.Unmarshal(body, &data)
+				type tweetContainer struct {
+					ContainerEmail string `json:"userId,omitempty"`
+					Containerdata  []tweets
+				}
+				containerObject := tweetContainer{ContainerEmail: userSignedIn, Containerdata: data}
+				fmt.Print(data)
+				tmpl.Execute(w, containerObject)
+			}
+		}
+		return
+	}
+}
+
+func createTweetHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("tweet.html"))
+	if r.Method != http.MethodPost {
 		tmpl.Execute(w, nil)
 		return
 	}
+
+	vars := mux.Vars(r)
+	userSignedIn := vars["id"]
+	//send post req to rest API to get a list of tweets to show
+	jsonData := map[string]string{"userId": userSignedIn, "userTweet": r.FormValue("tweet")}
+	jsonValue, _ := json.Marshal(jsonData)
+	response, err := http.Post("http://localhost:9000/createTweet", "application/json", bytes.NewBuffer(jsonValue))
+	//response from API
+	if err == nil {
+		body, e := ioutil.ReadAll(response.Body)
+		if e == nil {
+			var data map[string]bool
+			json.Unmarshal(body, &data)
+			if data["Success"] {
+				homeURL := "/home/" + userSignedIn
+				http.Redirect(w, r, homeURL, 302)
+				return
+			} else {
+				tmpl.Execute(w, struct{ Tweetfail bool }{true})
+			}
+		}
+	}
+
 }
