@@ -1,4 +1,12 @@
 <html>
-  <h1>HOME PAGE OF USER</h1>
-  <a href="/cancel">Delete account!</a>
+  <h1>HOME PAGE OF USER - put fname and lname of user here</h1>
+  <div>
+    <a href="/home/{id}/tweet"> create tweet</a> <br/>
+  </div>
+  <div>
+    <h2> Tweets from all other users</h2>
+    {{ range  . }}
+      <li><strong>{{ .Email }}</strong>: {{ .Tweet }}</li>
+   {{ end }}
+  </div>
 </html>
