@@ -130,10 +130,16 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 					Email string `json:"userId,omitempty"`
 					Tweet string `json:"userTweet,omitempty"`
 				}
+
 				var data []tweets
 				json.Unmarshal(body, &data)
+				type tweetContainer struct {
+					ContainerEmail string `json:"userId,omitempty"`
+					Containerdata  []tweets
+				}
+				containerObject := tweetContainer{ContainerEmail: userSignedIn, Containerdata: data}
 				fmt.Print(data)
-				tmpl.Execute(w, data)
+				tmpl.Execute(w, containerObject)
 			}
 		}
 		return
