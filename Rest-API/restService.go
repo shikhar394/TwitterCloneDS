@@ -41,11 +41,11 @@ func main() {
 	tweets = append(tweets, UserTweet{Email: "c@c", Tweet: "bb2 tweet"})
 	tweets = append(tweets, UserTweet{Email: "a@a", Tweet: "ba tweet"})
 	router := mux.NewRouter()
-	router.HandleFunc("/login", loginHandler).Methods("POST")
-	router.HandleFunc("/cancel", cancelHandler).Methods("POST")
-	router.HandleFunc("/signup", signupHandler).Methods("POST")
-	router.HandleFunc("/showTweets", showTweetsHandler).Methods("POST")
-	router.HandleFunc("/createTweet", createTweets).Methods("POST")
+	go router.HandleFunc("/login", loginHandler).Methods("POST")
+	go router.HandleFunc("/cancel", cancelHandler).Methods("POST")
+	go router.HandleFunc("/signup", signupHandler).Methods("POST")
+	go router.HandleFunc("/showTweets", showTweetsHandler).Methods("POST")
+	go router.HandleFunc("/createTweet", createTweets).Methods("POST")
 	http.ListenAndServe(":9000", router)
 }
 
@@ -80,6 +80,8 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 	// a map of email and tweet to be sent to client
 	var result []UserTweet
+	// var doneChannel chan bool
+	// var done bool
 	body, e := ioutil.ReadAll(r.Body)
 	if e == nil {
 		var params map[string]string
