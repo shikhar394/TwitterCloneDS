@@ -56,10 +56,11 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 	if e == nil {
 		var params map[string]string
 		json.Unmarshal(body, &params)
-		userID := params["userID"]
+		user := params["userId"]
 		userTweet := params["userTweet"]
+		fmt.Print(user)
 		//make new  Tweet and store in slice
-		tweets = append(tweets, UserTweet{Email: userID, Tweet: userTweet})
+		tweets = append(tweets, UserTweet{Email: user, Tweet: userTweet})
 		result["Success"] = true
 	} else {
 		result["Success"] = false
