@@ -1,0 +1,13 @@
+<html>
+  <body>
+    <h1> POST NEW TWEET</h1>
+    <form method="post">
+      <label for="tw"> Tweet: </label>
+      <input id ="tw" name="tweet" required> <br/>
+      <button style="border-radius: 30px; background-color: black; color: white;" type="submit"><span>Post Tweet</span></button>
+    </form>
+    {{if .Tweetfail}}
+    <h2> Failed to create tweet </h2>
+    {{end}}
+  </body>
+</html>
