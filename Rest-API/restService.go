@@ -24,6 +24,15 @@ type UserTweet struct {
 	Tweet string `json:"userTweet,omitempty"`
 }
 
+type UserTweetList struct {
+	Email     string `json:"userId,omitempty"`
+	AllTweets []UserTweet
+}
+
+var UserTweetsMap = make(map[string][]UserTweet)
+
+var UserFollower = make(map[string][]string)
+
 // TODO make maps pointing with email bool || pointer to node for constant lookups
 
 var Email string
@@ -37,9 +46,25 @@ var tweets []UserTweet
 
 func main() {
 	//add dummy tweet data
-	tweets = append(tweets, UserTweet{Email: "b@b", Tweet: "bb tweet"})
-	tweets = append(tweets, UserTweet{Email: "c@c", Tweet: "bb2 tweet"})
-	tweets = append(tweets, UserTweet{Email: "a@a", Tweet: "ba tweet"})
+	UserMap["abc@gmail.com"] = &User{"abc@gmail.com", "abc", "abc", "abc", nil}
+	UserElementList := sortedInsert(UserMap["abc@gmail.com"])
+	UserMap["abc@gmail.com"].PosInList = UserElementList
+
+	UserMap["abcd@gmail.com"] = &User{"abcd@gmail.com", "abcd", "abcd", "abcd", nil}
+	UserElementList = sortedInsert(UserMap["abcd@gmail.com"])
+	UserMap["abcd@gmail.com"].PosInList = UserElementList
+
+	UserMap["bcd@gmail.com"] = &User{"bcd@gmail.com", "bcd", "bcd", "bcd", nil}
+	UserElementList = sortedInsert(UserMap["bcd@gmail.com"])
+	UserMap["bcd@gmail.com"].PosInList = UserElementList
+
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "first tweet"})
+	UserTweetsMap["abcd@gmail.com"] = append(UserTweetsMap["abcd@gmail.com"], UserTweet{Email: "abcd@gmail.com", Tweet: "second tweet"})
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "third tweet"})
+	UserTweetsMap["bcd@gmail.com"] = append(UserTweetsMap["bcd@gmail.com"], UserTweet{Email: "bcd@gmail.com", Tweet: "fourth tweet"})
+
+	UserFollower["abc@gmail.com"] = append(UserFollower["abc@gmail.com"], "abcd@gmail.com", "bcd@gmail.com")
+
 	router := mux.NewRouter()
 	go router.HandleFunc("/login", loginHandler).Methods("POST")
 	go router.HandleFunc("/cancel", cancelHandler).Methods("POST")
@@ -60,7 +85,7 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		userTweet := params["userTweet"]
 		fmt.Print(user)
 		//make new  Tweet and store in slice
-		tweets = append(tweets, UserTweet{Email: user, Tweet: userTweet})
+		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -87,12 +112,20 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 		var params map[string]string
 		json.Unmarshal(body, &params)
 		userID := params["userId"]
-		for _, tweet := range tweets {
-			if tweet.Email != userID {
-				//add to results
-				result = append(result, UserTweet{Email: tweet.Email, Tweet: tweet.Tweet})
+		for _, follower := range UserFollower[userID] {
+			if tweets, ok := UserTweetsMap[follower]; ok {
+				for _, tweet := range tweets {
+					result = append(result, tweet)
+					fmt.Printf("Tweets %v", result)
+				}
 			}
 		}
+		// for _, tweet := range tweets {
+		// 	if tweet.Email != userID {
+		// 		//add to results
+		// 		result = append(result, UserTweet{Email: tweet.Email, Tweet: tweet.Tweet})
+		// 	}
+		// }
 		fmt.Print(result)
 		//send data back
 		jData, err := json.Marshal(result)

@@ -15,12 +15,12 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/", loginHandler)
-	router.HandleFunc("/cancel", cancelHandler)
-	router.HandleFunc("/goodbye", goodbyeHandler)
-	router.HandleFunc("/signup", signupHandler)
-	router.HandleFunc("/home/{id}", homeHandler)
-	router.HandleFunc("/home/{id}/tweet", createTweetHandler)
+	go router.HandleFunc("/", loginHandler)
+	go router.HandleFunc("/cancel", cancelHandler)
+	go router.HandleFunc("/goodbye", goodbyeHandler)
+	go router.HandleFunc("/signup", signupHandler)
+	go router.HandleFunc("/home/{id}", homeHandler)
+	go router.HandleFunc("/home/{id}/tweet", createTweetHandler)
 	http.ListenAndServe(":8000", router)
 }
 
@@ -138,7 +138,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 					Containerdata  []tweets
 				}
 				containerObject := tweetContainer{ContainerEmail: userSignedIn, Containerdata: data}
-				fmt.Print(data)
+				fmt.Print(containerObject)
 				tmpl.Execute(w, containerObject)
 			}
 		}
