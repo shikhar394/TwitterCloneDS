@@ -1,0 +1,13 @@
+<html>
+  <body>
+    <h1> FOLLOW A FRIEND </h1>
+    <form method="post">
+      <label for="fo"> Enter Email to follow (case sensitive): </label>
+      <input id ="fo" name="user_follow" required> <br/>
+      <button style="border-radius: 30px; background-color: black; color: white;" type="submit"><span>Follow Friend</span></button>
+    </form>
+    {{if .Followfail}}
+    <h2> Friend not found!! Check email again </h2>
+    {{end}}
+  </body>
+</html>

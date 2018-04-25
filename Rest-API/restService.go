@@ -71,7 +71,37 @@ func main() {
 	go router.HandleFunc("/signup", signupHandler).Methods("POST")
 	go router.HandleFunc("/showTweets", showTweetsHandler).Methods("POST")
 	go router.HandleFunc("/createTweet", createTweets).Methods("POST")
+	go router.HandleFunc("/followUser", followUser).Methods("POST")
 	http.ListenAndServe(":9000", router)
+}
+
+func followUser(w http.ResponseWriter, r *http.Request) {
+	var result map[string]bool
+	result = make(map[string]bool)
+	body, e := ioutil.ReadAll(r.Body)
+	if e == nil {
+		var params map[string]string
+		json.Unmarshal(body, &params)
+		user := params["userId"]
+		userToFollow := params["userToFollow"]
+		//Check if the user to follow actually exists
+		_, ok := UserMap[userToFollow]
+		if ok {
+			UserFollower[user] = append(UserFollower[user], userToFollow)
+			result["Success"] = true
+		} else {
+			result["Success"] = false
+		}
+	}
+	//send data back
+	jData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jData)
+	return
 }
 
 func createTweets(w http.ResponseWriter, r *http.Request) {

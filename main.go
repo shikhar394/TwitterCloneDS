@@ -21,6 +21,7 @@ func main() {
 	go router.HandleFunc("/signup", signupHandler)
 	go router.HandleFunc("/home/{id}", homeHandler)
 	go router.HandleFunc("/home/{id}/tweet", createTweetHandler)
+	go router.HandleFunc("/home/{id}/follow", followFriendHandler)
 	http.ListenAndServe(":8000", router)
 }
 
@@ -174,5 +175,34 @@ func createTweetHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
 
+func followFriendHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("follow.html"))
+	if r.Method != http.MethodPost {
+		tmpl.Execute(w, nil)
+		return
+	}
+
+	vars := mux.Vars(r)
+	userSignedIn := vars["id"]
+	//send post req to rest API to get a list of tweets to show
+	jsonData := map[string]string{"userId": userSignedIn, "userToFollow": r.FormValue("user_follow")}
+	jsonValue, _ := json.Marshal(jsonData)
+	response, err := http.Post("http://localhost:9000/followUser", "application/json", bytes.NewBuffer(jsonValue))
+	//response from API
+	if err == nil {
+		body, e := ioutil.ReadAll(response.Body)
+		if e == nil {
+			var data map[string]bool
+			json.Unmarshal(body, &data)
+			if data["Success"] {
+				homeURL := "/home/" + userSignedIn
+				http.Redirect(w, r, homeURL, 302)
+				return
+			} else {
+				tmpl.Execute(w, struct{ Followfail bool }{true})
+			}
+		}
+	}
 }
