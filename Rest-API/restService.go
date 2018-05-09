@@ -325,22 +325,25 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func replicateData(jsonValue []byte, count *int) {
-	//c := make(chan bool)
+	done := make(chan bool)
 	for i := 1; i < totalServers; i++ {
-		//	go func(i int, count *int, c chan bool) {
-		response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+"/userReplicate", "application/json", bytes.NewBuffer(jsonValue))
-		if err == nil {
-			body, e := ioutil.ReadAll(response.Body)
-			if e == nil {
-				var data map[string]bool
-				json.Unmarshal(body, &data)
-				if data["UserReplicationSuccess"] == true {
-					*count++
-					c <- true
+		go func(i int, count *int) {
+			response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+"/userReplicate", "application/json", bytes.NewBuffer(jsonValue))
+			if err == nil {
+				body, e := ioutil.ReadAll(response.Body)
+				if e == nil {
+					var data map[string]bool
+					json.Unmarshal(body, &data)
+					if data["UserReplicationSuccess"] == true {
+						*count++
+						done <- true
+					}
 				}
 			}
-		}
-		//	}(i, &count, c)
+		}(i, count)
+	}
+	for i := 1; i < totalServers; i++ {
+		<-done
 	}
 	fmt.Printf("\n\n\nDONE WITH REPLICATIOn %v\n\n\n", *count)
 }
