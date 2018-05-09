@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -44,6 +45,8 @@ var UserList = list.New() // Only for distributing among servers while making di
 //Users := make(map[Emai])
 // user email to tweet map TODO: add structs
 var tweets []UserTweet
+
+totalServers := 3
 
 func main() {
 	//add dummy tweet data
@@ -93,17 +96,20 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 			count := 0
 			jsonData := map[string]string{"userId": user, "userToFollow": userToFollow}
 			jsonValue, _ := json.Marshal(jsonData)
-			response, err := http.Post("http://localhost:9001/followerReplicate", "application/json", bytes.NewBuffer(jsonValue))
-			if err == nil {
-				body, e := ioutil.ReadAll(response.Body)
-				if e == nil {
-					var data map[string]bool
-					json.Unmarshal(body, &data)
-					if data["FollowerReplicationSuccess"] == true {
-						count = count + 1
+			for i := 1; i < 3; i++ {
+				response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+"/followerReplicate", "application/json", bytes.NewBuffer(jsonValue))
+				if err == nil {
+					body, e := ioutil.ReadAll(response.Body)
+					if e == nil {
+						var data map[string]bool
+						json.Unmarshal(body, &data)
+						if data["FollowerReplicationSuccess"] == true {
+							count = count + 1
+						}
 					}
 				}
 			}
+
 			//TODO check if majority appended.
 			result["Success"] = true
 		} else {
@@ -227,7 +233,7 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 					if e == nil {
 						var data map[string]bool
 						json.Unmarshal(body, &data)
-						if data["UserReplicationSuccess"] == true {
+						if data["DeleteUserReplicationSuccess"] == true {
 							count = count + 1
 						}
 					}
