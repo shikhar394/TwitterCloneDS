@@ -26,8 +26,9 @@ type UserTweetList struct {
 	AllTweets []UserTweet
 }
 type OperationDetails struct {
-	Operation   []byte
-	ClientEmail string //Gets email of the client as identifier
+	OperationName string
+	Cmd           []byte
+	ClientEmail   string //Gets email of the client as identifier
 }
 
 var UserTweetsMap = make(map[string][]UserTweet)
@@ -40,13 +41,16 @@ var UserMap = make(map[string]*User)
 
 var OperationLog []OperationDetails
 
+var CommitLog []int
+
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/userReplicate", userReplicateHandler).Methods("POST")
 	router.HandleFunc("/tweetReplicate", tweetReplicateHandler).Methods("POST")
 	router.HandleFunc("/followerReplicate", followerReplicateHandler).Methods("POST")
 	router.HandleFunc("/deleteUserReplicate", deleteUserReplicateHandler).Methods("POST")
-	http.ListenAndServe(":9002", router)
+	router.HandleFunc("/CommitIndexHandler", CommitIndexHandler).Methods("POST")
+	http.ListenAndServe(":9001", router)
 }
 
 //The Master will call this endpoint to replicate the latest user map it has.
@@ -60,9 +64,9 @@ func deleteUserReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		user := params["userEmail"]
 		OperationLog = append(OperationLog, OperationDetails{"deleteUserReplicateHandler", body, user})
 		delete(UserMap, user)
-		result["DeleteUserReplicationSuccess"] = true
+		result["Success"] = true
 	} else {
-		result["DeleteUserReplicationSuccess"] = false
+		result["Success"] = false
 	}
 	jData, err := json.Marshal(result)
 	if err != nil {
@@ -86,9 +90,9 @@ func followerReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		userToFollow := params["userToFollow"]
 		OperationLog = append(OperationLog, OperationDetails{"followerReplicateHandler", body, user})
 		UserFollower[user] = append(UserFollower[user], userToFollow)
-		result["FollowerReplicationSuccess"] = true
+		result["Success"] = true
 	} else {
-		result["FollowerReplicationSuccess"] = false
+		result["Success"] = false
 	}
 	jData, err := json.Marshal(result)
 	if err != nil {
@@ -111,10 +115,11 @@ func tweetReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		user := params["userId"]
 		userTweet := params["userTweet"]
 		OperationLog = append(OperationLog, OperationDetails{"tweetReplicateHandler", body, user})
+		fmt.Printf("Log: %v\n", OperationLog)
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
-		result["TweetReplicationSuccess"] = true
+		result["Success"] = true
 	} else {
-		result["TweetReplicationSuccess"] = false
+		result["Success"] = false
 	}
 	jData, err := json.Marshal(result)
 	if err != nil {
@@ -142,9 +147,9 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		UserMap[newUser.Email] = newUser
 		fmt.Printf("User values %v", UserMap)
 		OperationLog = append(OperationLog, OperationDetails{"userReplicateHandler", body, newUser.Email})
-		result["UserReplicationSuccess"] = true
+		result["Success"] = true
 	} else {
-		result["UserReplicationSuccess"] = false
+		result["Success"] = false
 	}
 	jData, err := json.Marshal(result)
 	if err != nil {
@@ -155,4 +160,31 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jData)
 	return
 
+}
+
+func CommitIndexHandler(w http.ResponseWriter, r *http.Request) {
+	body, e := ioutil.ReadAll(r.Body)
+	var result map[string]bool
+	result = make(map[string]bool)
+	if e == nil {
+		var params map[string]int
+		json.Unmarshal(body, &params)
+		CommitIndex := params["Commit"]
+		OperationIndex := params["Operation"]
+		CommitLog = append(CommitLog, OperationIndex)
+		fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
+		if len(CommitLog) == CommitIndex {
+			result["Success"] = true
+		} else {
+			result["Success"] = true
+		}
+	}
+	jData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jData)
+	return
 }
