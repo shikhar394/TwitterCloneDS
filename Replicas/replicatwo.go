@@ -25,6 +25,10 @@ type UserTweetList struct {
 	Email     string `json:"userId,omitempty"`
 	AllTweets []UserTweet
 }
+type OperationDetails struct {
+	Operation   []byte
+	ClientEmail string //Gets email of the client as identifier
+}
 
 var UserTweetsMap = make(map[string][]UserTweet)
 
@@ -33,6 +37,8 @@ var UserFollower = make(map[string][]string)
 // TODO make maps pointing with email bool || pointer to node for constant lookups
 
 var UserMap = make(map[string]*User)
+
+var OperationLog []OperationDetails
 
 func main() {
 	router := mux.NewRouter()
@@ -52,6 +58,7 @@ func deleteUserReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		var params map[string]string
 		json.Unmarshal(body, &params)
 		user := params["userEmail"]
+		OperationLog = append(OperationLog, OperationDetails{"deleteUserReplicateHandler", body, user})
 		delete(UserMap, user)
 		result["DeleteUserReplicationSuccess"] = true
 	} else {
@@ -77,6 +84,7 @@ func followerReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		json.Unmarshal(body, &params)
 		user := params["userId"]
 		userToFollow := params["userToFollow"]
+		OperationLog = append(OperationLog, OperationDetails{"followerReplicateHandler", body, user})
 		UserFollower[user] = append(UserFollower[user], userToFollow)
 		result["FollowerReplicationSuccess"] = true
 	} else {
@@ -102,6 +110,7 @@ func tweetReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		json.Unmarshal(body, &params)
 		user := params["userId"]
 		userTweet := params["userTweet"]
+		OperationLog = append(OperationLog, OperationDetails{"tweetReplicateHandler", body, user})
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 		result["TweetReplicationSuccess"] = true
 	} else {
@@ -132,6 +141,7 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		newUser.Password = params["Password"]
 		UserMap[newUser.Email] = newUser
 		fmt.Printf("User values %v", UserMap)
+		OperationLog = append(OperationLog, OperationDetails{"userReplicateHandler", body, newUser.Email})
 		result["UserReplicationSuccess"] = true
 	} else {
 		result["UserReplicationSuccess"] = false
