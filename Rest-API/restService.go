@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/json"
 	"fmt"
@@ -88,6 +89,22 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 		_, ok := UserMap[userToFollow]
 		if ok {
 			UserFollower[user] = append(UserFollower[user], userToFollow)
+			//Replicate on backend.
+			count := 0
+			jsonData := map[string]string{"userId": user, "userToFollow": userToFollow}
+			jsonValue, _ := json.Marshal(jsonData)
+			response, err := http.Post("http://localhost:9001/followerReplicate", "application/json", bytes.NewBuffer(jsonValue))
+			if err == nil {
+				body, e := ioutil.ReadAll(response.Body)
+				if e == nil {
+					var data map[string]bool
+					json.Unmarshal(body, &data)
+					if data["FollowerReplicationSuccess"] == true {
+						count = count + 1
+					}
+				}
+			}
+			//TODO check if majority appended.
 			result["Success"] = true
 		} else {
 			result["Success"] = false
@@ -116,6 +133,22 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		fmt.Print(user)
 		//make new  Tweet and store in slice
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
+		//Replicate on backend.
+		count := 0
+		jsonData := map[string]string{"userId": user, "userTweet": userTweet}
+		jsonValue, _ := json.Marshal(jsonData)
+		response, err := http.Post("http://localhost:9001/tweetReplicate", "application/json", bytes.NewBuffer(jsonValue))
+		if err == nil {
+			body, e := ioutil.ReadAll(response.Body)
+			if e == nil {
+				var data map[string]bool
+				json.Unmarshal(body, &data)
+				if data["TweetReplicationSuccess"] == true {
+					count = count + 1
+				}
+			}
+		}
+		// TODO Check if majority appended tweet info to log
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -184,6 +217,21 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 				//remove user
 				UserList.Remove(User.PosInList)
 				delete(UserMap, userEmail)
+				//Replicate on backend.
+				count := 0
+				jsonData := map[string]string{"userEmail": userEmail}
+				jsonValue, _ := json.Marshal(jsonData)
+				response, err := http.Post("http://localhost:9001/deleteUserReplicate", "application/json", bytes.NewBuffer(jsonValue))
+				if err == nil {
+					body, e := ioutil.ReadAll(response.Body)
+					if e == nil {
+						var data map[string]bool
+						json.Unmarshal(body, &data)
+						if data["UserReplicationSuccess"] == true {
+							count = count + 1
+						}
+					}
+				}
 				result["Success"] = true
 			} else {
 				//fail - do not do anything
@@ -277,6 +325,23 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		UserMap[(newUser).Email] = newUser
 		readUsers()
 		//fmt.Print(UserList.Front().Value.(*User).FirstName)map
+		//Replicate on backend.
+		count := 0
+		jsonData := map[string]string{"Email": newUser.Email, "FirstName": newUser.FirstName,
+			"LastName": newUser.LastName, "Password": newUser.Password}
+		jsonValue, _ := json.Marshal(jsonData)
+		response, err := http.Post("http://localhost:9001/userReplicate", "application/json", bytes.NewBuffer(jsonValue))
+		if err == nil {
+			body, e := ioutil.ReadAll(response.Body)
+			if e == nil {
+				var data map[string]bool
+				json.Unmarshal(body, &data)
+				if data["UserReplicationSuccess"] == true {
+					count = count + 1
+				}
+			}
+		}
+		// TODO if majority appends to the log send success to front end.
 		result["Success"] = true
 		result["DuplicateAccount"] = false
 	} else {
