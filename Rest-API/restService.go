@@ -46,7 +46,7 @@ var UserList = list.New() // Only for distributing among servers while making di
 // user email to tweet map TODO: add structs
 var tweets []UserTweet
 
-totalServers := 3
+var totalServers = 3
 
 func main() {
 	//add dummy tweet data
@@ -93,10 +93,10 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			UserFollower[user] = append(UserFollower[user], userToFollow)
 			//Replicate on backend.
-			count := 0
+			count := 1
 			jsonData := map[string]string{"userId": user, "userToFollow": userToFollow}
 			jsonValue, _ := json.Marshal(jsonData)
-			for i := 1; i < 3; i++ {
+			for i := 1; i < totalServers; i++ {
 				response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+"/followerReplicate", "application/json", bytes.NewBuffer(jsonValue))
 				if err == nil {
 					body, e := ioutil.ReadAll(response.Body)
@@ -109,9 +109,10 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-
-			//TODO check if majority appended.
-			result["Success"] = true
+			if count > totalServers/2 {
+				//check if majority appended.
+				result["Success"] = true
+			}
 		} else {
 			result["Success"] = false
 		}
@@ -140,22 +141,26 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		//make new  Tweet and store in slice
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 		//Replicate on backend.
-		count := 0
+		count := 1
 		jsonData := map[string]string{"userId": user, "userTweet": userTweet}
 		jsonValue, _ := json.Marshal(jsonData)
-		response, err := http.Post("http://localhost:9001/tweetReplicate", "application/json", bytes.NewBuffer(jsonValue))
-		if err == nil {
-			body, e := ioutil.ReadAll(response.Body)
-			if e == nil {
-				var data map[string]bool
-				json.Unmarshal(body, &data)
-				if data["TweetReplicationSuccess"] == true {
-					count = count + 1
+		for i := 1; i < totalServers; i++ {
+			response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+"/tweetReplicate", "application/json", bytes.NewBuffer(jsonValue))
+			if err == nil {
+				body, e := ioutil.ReadAll(response.Body)
+				if e == nil {
+					var data map[string]bool
+					json.Unmarshal(body, &data)
+					if data["TweetReplicationSuccess"] == true {
+						count = count + 1
+					}
 				}
 			}
 		}
-		// TODO Check if majority appended tweet info to log
-		result["Success"] = true
+		if count > totalServers/2 {
+			// Check if majority appended tweet info to log
+			result["Success"] = true
+		}
 	} else {
 		result["Success"] = false
 	}
