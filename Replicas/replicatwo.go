@@ -40,7 +40,7 @@ func main() {
 	router.HandleFunc("/tweetReplicate", tweetReplicateHandler).Methods("POST")
 	router.HandleFunc("/followerReplicate", followerReplicateHandler).Methods("POST")
 	router.HandleFunc("/deleteUserReplicate", deleteUserReplicateHandler).Methods("POST")
-	http.ListenAndServe(":9001", router)
+	http.ListenAndServe(":9002", router)
 }
 
 //The Master will call this endpoint to replicate the latest user map it has.
@@ -131,8 +131,8 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		newUser.LastName = params["LastName"]
 		newUser.Password = params["Password"]
 		UserMap[newUser.Email] = newUser
-		fmt.Print("User replicated")
 		result["UserReplicationSuccess"] = true
+		fmt.Print("User replicated")
 	} else {
 		result["UserReplicationSuccess"] = false
 	}
