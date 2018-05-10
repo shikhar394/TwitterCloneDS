@@ -276,8 +276,6 @@ func CreateUserFromLog(body []byte) {
 	newUser.LastName = params["LastName"]
 	newUser.Password = params["Password"]
 	UserMap[(newUser).Email] = newUser
-	//OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
-	fmt.Printf("UserMap %v\n\n", UserMap)
 	return
 }
 

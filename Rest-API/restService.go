@@ -121,6 +121,35 @@ func main() {
 	http.ListenAndServe(":9000", router)
 }
 
+func TestHandlers() *mux.Router {
+	UserMap["abc@gmail.com"] = &User{"abc@gmail.com", "abc", "abc", "abc", nil}
+	UserElementList := sortedInsert(UserMap["abc@gmail.com"])
+	UserMap["abc@gmail.com"].PosInList = UserElementList
+
+	UserMap["abcd@gmail.com"] = &User{"abcd@gmail.com", "abcd", "abcd", "abcd", nil}
+	UserElementList = sortedInsert(UserMap["abcd@gmail.com"])
+	UserMap["abcd@gmail.com"].PosInList = UserElementList
+
+	UserMap["bcd@gmail.com"] = &User{"bcd@gmail.com", "bcd", "bcd", "bcd", nil}
+	UserElementList = sortedInsert(UserMap["bcd@gmail.com"])
+	UserMap["bcd@gmail.com"].PosInList = UserElementList
+
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "first tweet"})
+	UserTweetsMap["abcd@gmail.com"] = append(UserTweetsMap["abcd@gmail.com"], UserTweet{Email: "abcd@gmail.com", Tweet: "second tweet"})
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "third tweet"})
+	UserTweetsMap["bcd@gmail.com"] = append(UserTweetsMap["bcd@gmail.com"], UserTweet{Email: "bcd@gmail.com", Tweet: "fourth tweet"})
+
+	UserFollower["abc@gmail.com"] = append(UserFollower["abc@gmail.com"], "abcd@gmail.com", "bcd@gmail.com")
+	router := mux.NewRouter()
+	router.HandleFunc("/login", loginHandler).Methods("POST")
+	router.HandleFunc("/cancel", cancelHandler).Methods("POST")
+	router.HandleFunc("/signup", signupHandler).Methods("POST")
+	router.HandleFunc("/showTweets", showTweetsHandler).Methods("POST")
+	router.HandleFunc("/createTweet", createTweets).Methods("POST")
+	router.HandleFunc("/followUser", followUser).Methods("POST")
+	return router
+}
+
 func followUser(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
@@ -208,7 +237,7 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 			if tweets, ok := UserTweetsMap[follower]; ok {
 				for _, tweet := range tweets {
 					result = append(result, tweet)
-					fmt.Printf("Tweets %v", result)
+					//fmt.Printf("Tweets %v", result)
 				}
 			}
 		}
@@ -218,7 +247,7 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 		// 		result = append(result, UserTweet{Email: tweet.Email, Tweet: tweet.Tweet})
 		// 	}
 		// }
-		fmt.Print(result)
+		//fmt.Print(result)
 		//send data back
 		jData, err := json.Marshal(result)
 		if err != nil {
@@ -407,7 +436,7 @@ func replicateData(jsonValue []byte, count *int, handlerName string, opNumber in
 	if opNumber > 0 {
 		CommitLog = append(CommitLog, opNumber)
 		replicateCommitIndex(len(CommitLog), opNumber)
-		fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
+		//fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
 	}
-	fmt.Printf("\n\n\nDONE WITH REPLICATIOn %v\n\n\n", *count)
+	//fmt.Printf("\n\n\nDONE WITH REPLICATIOn %v\n\n\n", *count)
 }
