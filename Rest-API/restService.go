@@ -169,8 +169,8 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 			jsonData["user"] = FollowUserReplicate{user, userToFollow, OperationLog, CommitLog}
 			jsonValue, _ := json.Marshal(jsonData)
 			OperationLog = append(OperationLog, OperationDetails{"followUser", body, user})
-			fmt.Printf("\n FOLLOW LOG \n %v", OperationLog)
-			go replicateData(jsonValue, &count, "/followerReplicate", len(OperationLog))
+			//fmt.Printf("\n FOLLOW LOG \n %v", OperationLog)
+			replicateData(jsonValue, &count, "/followerReplicate", len(OperationLog))
 			//check if majority appended.
 			result["Success"] = true
 		} else {
@@ -206,7 +206,7 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		jsonData := map[string]UserTweetReplicate{}
 		jsonData["user"] = UserTweetReplicate{user, userTweet, OperationLog, CommitLog}
 		jsonValue, _ := json.Marshal(jsonData)
-		go replicateData(jsonValue, &count, "/tweetReplicate", len(OperationLog))
+		replicateData(jsonValue, &count, "/tweetReplicate", len(OperationLog))
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -282,7 +282,7 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 					OperationLog, CommitLog}
 				jsonValue, _ := json.Marshal(jsonData)
 				OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
-				go replicateData(jsonValue, &count, "/deleteUserReplicate", len(OperationLog))
+				replicateData(jsonValue, &count, "/deleteUserReplicate", len(OperationLog))
 				result["Success"] = true
 			} else {
 				//fail - do not do anything
@@ -376,14 +376,14 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		UserElementList := sortedInsert(newUser)
 		newUser.PosInList = UserElementList
 		UserMap[(newUser).Email] = newUser
-		readUsers()
+		//readUsers()
 		//fmt.Print(UserList.Front().Value.(*User).FirstName)map
 		//Replicate on backend.
 		OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
 		jsonData := map[string]CreateUserReplicate{}
 		jsonData["user"] = CreateUserReplicate{newUser.Email, newUser.FirstName, newUser.LastName, newUser.Password, OperationLog, CommitLog}
 		jsonValue, _ := json.Marshal(jsonData)
-		go replicateData(jsonValue, &count, "/userReplicate", len(OperationLog))
+		replicateData(jsonValue, &count, "/userReplicate", len(OperationLog))
 
 		// TODO if majority appends to the log send success to front end.
 		result["Success"] = true
@@ -436,7 +436,7 @@ func replicateData(jsonValue []byte, count *int, handlerName string, opNumber in
 	if opNumber > 0 {
 		CommitLog = append(CommitLog, opNumber)
 		replicateCommitIndex(len(CommitLog), opNumber)
-		//fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
+		fmt.Printf("CommitLog %v \n\n Operation Log %v\n\n", CommitLog, OperationLog)
 	}
 	//fmt.Printf("\n\n\nDONE WITH REPLICATIOn %v\n\n\n", *count)
 }

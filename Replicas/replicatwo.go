@@ -161,7 +161,7 @@ func tweetReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	if e == nil {
 		var params map[string]UserTweetReplicate
 		json.Unmarshal(body, &params)
-		fmt.Printf("Userssss %v\n", params)
+		//fmt.Printf("Userssss %v\n", params)
 		TweetDetails := params["user"]
 		PrimaryCommitLog := TweetDetails.CommitLog
 		PrimaryOperationLog := TweetDetails.OperationLog
@@ -172,7 +172,7 @@ func tweetReplicateHandler(w http.ResponseWriter, r *http.Request) {
 		// }
 
 		OperationLog = append(OperationLog, OperationDetails{"tweetReplicateHandler", body, user})
-		fmt.Printf("Log: %v \n PrimaryLog %v\n CommitLog %v", len(OperationLog), PrimaryOperationLog, PrimaryCommitLog)
+		//fmt.Printf("PrimaryLog %v\n CommitLog %v", PrimaryOperationLog, PrimaryCommitLog)
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 		if len(OperationLog) < len(PrimaryOperationLog) {
 			go fixLogs(PrimaryOperationLog, PrimaryCommitLog)
@@ -242,7 +242,7 @@ func CommitIndexHandler(w http.ResponseWriter, r *http.Request) {
 		CommitIndex := params["Commit"]
 		OperationIndex := params["Operation"]
 		CommitLog = append(CommitLog, OperationIndex)
-		fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
+		fmt.Printf("CommitLog %v \n\n Operation Log %v\n\n", CommitLog, OperationLog)
 		if len(CommitLog) == CommitIndex {
 			result["Success"] = true
 		} else {
@@ -263,7 +263,7 @@ func fixLogs(PrimaryOperationLog []OperationDetails, PrimaryCommitLog []int) {
 	OperationLog = PrimaryOperationLog[:]
 	CommitLog = PrimaryCommitLog[:]
 	go RecreateLogEvents()
-	fmt.Printf("Fixing Logs %v\n\n", OperationLog)
+	fmt.Printf("Fixing Logs \n%v\n", OperationLog)
 	return
 }
 
@@ -284,12 +284,11 @@ func CreateTweetFromLog(body []byte) {
 	json.Unmarshal(body, &params)
 	user := params["userId"]
 	userTweet := params["userTweet"]
-	fmt.Print(user)
+	//fmt.Print(user)
 	//make new  Tweet and store in slice
 	UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 	//Replicate on backend.
 	//OperationLog = append(OperationLog, OperationDetails{"createTweets", body, user})
-	fmt.Printf("UserTweetMap %v\n\n", UserTweetsMap)
 	return
 }
 
@@ -303,7 +302,6 @@ func FollowUserFromLog(body []byte) {
 	jsonData := map[string]FollowUserReplicate{}
 	jsonData["user"] = FollowUserReplicate{user, userToFollow, OperationLog, CommitLog}
 	//OperationLog = append(OperationLog, OperationDetails{"followUser", body, user})
-	fmt.Printf("UserFollower %v\n\n", UserFollower)
 	return
 }
 
@@ -312,7 +310,7 @@ func CancelUserFromLog(body []byte) {
 	json.Unmarshal(body, &params)
 	userEmail := params["email"]
 	delete(UserMap, userEmail)
-	fmt.Printf("UserMap %v\n\n", UserMap)
+
 	//OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
 	return
 }
@@ -334,4 +332,8 @@ func RecreateLogEvents() {
 			fmt.Print("Operation Not supported")
 		}
 	}
+	fmt.Printf("UserMap %v\n\n", UserMap)
+	fmt.Printf("UserFollower %v\n\n", UserFollower)
+	fmt.Printf("UserTweetMap %v\n\n", UserTweetsMap)
+
 }
