@@ -51,6 +51,22 @@ type FollowUserReplicate struct {
 	CommitLog    []int
 }
 
+type CancelUserReplicate struct {
+	UserID       string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type CreateUserReplicate struct {
+	Email        string
+	FirstName    string
+	LastName     string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
 var UserTweetsMap = make(map[string][]UserTweet)
 
 var UserFollower = make(map[string][]string)
@@ -232,8 +248,9 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 				UserList.Remove(User.PosInList)
 				delete(UserMap, userEmail)
 				//Replicate on backend.
-				jsonData := map[string]interface{}{"userEmail": userEmail, "OperationLog": OperationLog,
-					"CommitLog": CommitLog}
+				jsonData := map[string]CancelUserReplicate{}
+				jsonData["user"] = CancelUserReplicate{userEmail, userPassword,
+					OperationLog, CommitLog}
 				jsonValue, _ := json.Marshal(jsonData)
 				OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
 				go replicateData(jsonValue, &count, "/deleteUserReplicate", len(OperationLog))
@@ -334,9 +351,8 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		//fmt.Print(UserList.Front().Value.(*User).FirstName)map
 		//Replicate on backend.
 		OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
-		jsonData := map[string]interface{}{"Email": newUser.Email, "FirstName": newUser.FirstName,
-			"LastName": newUser.LastName, "Password": newUser.Password, "OperationLog": OperationLog,
-			"CommitLog": CommitLog}
+		jsonData := map[string]CreateUserReplicate{}
+		jsonData["user"] = CreateUserReplicate{newUser.Email, newUser.FirstName, newUser.LastName, newUser.Password, OperationLog, CommitLog}
 		jsonValue, _ := json.Marshal(jsonData)
 		go replicateData(jsonValue, &count, "/userReplicate", len(OperationLog))
 

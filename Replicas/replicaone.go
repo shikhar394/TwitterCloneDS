@@ -45,6 +45,22 @@ type FollowUserReplicate struct {
 	CommitLog    []int
 }
 
+type CancelUserReplicate struct {
+	UserID       string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type CreateUserReplicate struct {
+	Email        string
+	FirstName    string
+	LastName     string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
 var UserTweetsMap = make(map[string][]UserTweet)
 
 var UserFollower = make(map[string][]string)
@@ -75,11 +91,13 @@ func deleteUserReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]interface{}
+		var params map[string]CancelUserReplicate
 		json.Unmarshal(body, &params)
-		user, _ := params["userEmail"].(string)
-		PrimaryCommitLog, _ := params["CommitLog"].([]int)
-		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
+		CancelUserReplicate := params["user"]
+		user := CancelUserReplicate.UserID
+		//password := CancelUserReplicate.Password
+		PrimaryCommitLog := CancelUserReplicate.CommitLog
+		PrimaryOperationLog := CancelUserReplicate.OperationLog
 		OperationLog = append(OperationLog, OperationDetails{"deleteUserReplicateHandler", body, user})
 		delete(UserMap, user)
 		if len(OperationLog) < len(PrimaryOperationLog) {
@@ -107,12 +125,13 @@ func followerReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]interface{}
+		var params map[string]FollowUserReplicate
 		json.Unmarshal(body, &params)
-		user, _ := params["userId"].(string)
-		userToFollow, _ := params["userToFollow"].(string)
-		PrimaryCommitLog, _ := params["CommitLog"].([]int)
-		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
+		FollowUserDetails := params["user"]
+		user := FollowUserDetails.UserID
+		userToFollow := FollowUserDetails.UserToFollow
+		PrimaryCommitLog := FollowUserDetails.CommitLog
+		PrimaryOperationLog := FollowUserDetails.OperationLog
 		OperationLog = append(OperationLog, OperationDetails{"followerReplicateHandler", body, user})
 		UserFollower[user] = append(UserFollower[user], userToFollow)
 		if len(OperationLog) < len(PrimaryOperationLog) {
@@ -181,14 +200,15 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]interface{}
+		var params map[string]CreateUserReplicate
 		json.Unmarshal(body, &params)
-		newUser.Email, _ = params["Email"].(string)
-		newUser.FirstName, _ = params["FirstName"].(string)
-		newUser.LastName, _ = params["LastName"].(string)
-		newUser.Password, _ = params["Password"].(string)
-		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
-		PrimaryCommitLog, _ := params["CommitLog"].([]int)
+		NewUserReplicate := params["user"]
+		newUser.Email = NewUserReplicate.Email
+		newUser.FirstName = NewUserReplicate.FirstName
+		newUser.LastName = NewUserReplicate.LastName
+		newUser.Password = NewUserReplicate.Password
+		PrimaryOperationLog := NewUserReplicate.OperationLog
+		PrimaryCommitLog := NewUserReplicate.CommitLog
 		UserMap[newUser.Email] = newUser
 		OperationLog = append(OperationLog, OperationDetails{"userReplicateHandler", body, newUser.Email})
 		fmt.Printf("User values %v", UserMap)
