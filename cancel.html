@@ -1,4 +1,34 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body style="background-color: lightgrey;">
+    <div class="container" style="padding-top: 10%">
+      <div class="col-lg-4 col-lg-offset-4">
+      <form id="loginForm" method="post" class="form-signin">
+        <h3 class="form-signin-heading">CANCEL ACCOUNT</h3>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+          <input type="email" id="inputEmail" name="email" class="form-control" placeholder="Email address" required></input>
+        </div>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+          <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" role="button">Cancel Account</button>
+        {{if .Authfail}}
+        <div class="alert alert-danger" role="alert">
+          <a href="/">Account not found in record. Redirect to login page!</a>
+        </div>
+        {{end}}
+      </form>
+    </div>
+  </div>
+  </body>
+</html>
+<!-- <html>
 <h1 style="text-align: center"> TWITTER CLONE </h1><br/>
 <form id="loginForm" method="post">
   <table style="border: black double 10px; margin: auto; vertical-align: central">
@@ -30,4 +60,4 @@
     </tbody>
   </table>
 </form>
-</html>
+</html> -->

@@ -1,4 +1,30 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body style="background-color: lightgrey;">
+    <div class="container">
+      <div class="col-lg-10 col-lg-offset-1">
+        <h1>WELCOME USER - HOME PAGE</h1>
+        <h3>EMAIL : {{ .ContainerEmail }}</h3>
+      </div>
+      <div class="col-lg-8 col-lg-offset-2">
+        <a href="/"> <h4>Log out </h4></a>
+        <a href="/home/{{ .ContainerEmail }}/tweet"> <h4>Create Tweet </h4></a>
+        <a href="/home/{{ .ContainerEmail }}/follow"> <h4> Follow a Friend </h4> </a><br/>
+        <div style="align-items: center">
+          <h2> Your Friends Tweeted... </h2>
+          {{ range .Containerdata }}
+            <div class="panel panel-default"><strong>{{ .Email }}</strong>: {{ .Tweet }}</div>
+         {{ end }}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+<!-- <html>
   <h1>HOME PAGE OF USER - put fname and lname of user here</h1>
   <div>
     <p>{{ .ContainerEmail }}</p>
@@ -11,4 +37,4 @@
       <li><strong>{{ .Email }}</strong>: {{ .Tweet }}</li>
    {{ end }}
   </div>
-</html>
+</html> -->

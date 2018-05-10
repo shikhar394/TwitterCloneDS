@@ -1,4 +1,28 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body style="background-color: lightgrey;">
+    <div class="container" style="padding-top: 10%">
+      <div class="col-lg-4 col-lg-offset-4">
+      <form id="loginForm" method="post" class="form-signin">
+        <h3 class="form-signin-heading">FOLLOW YOUR FRIEND</h3>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+          <input type="email" id="inputEmail" name="user_follow" class="form-control" placeholder="Enter Email to follow (case sensitive):" required></input>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" role="button">Follow</button>
+        {{if .Followfail}}
+        <div class="alert alert-danger" role="alert"> Friend not found!! Check email again </div>
+        {{end}}
+      </form>
+    </div>
+  </div>
+  </body>
+</html>
+<!-- <html>
   <body>
     <h1> FOLLOW A FRIEND </h1>
     <form method="post">
@@ -10,4 +34,4 @@
     <h2> Friend not found!! Check email again </h2>
     {{end}}
   </body>
-</html>
+</html> -->

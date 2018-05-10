@@ -1,4 +1,28 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body style="background-color: lightgrey;">
+    <div class="container" style="padding-top: 10%">
+      <div class="col-lg-4 col-lg-offset-4">
+      <form id="loginForm" method="post" class="form-signin">
+        <h3 class="form-signin-heading">POST NEW TWEET</h3>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-plus"></i></span>
+          <input type="text" id="inputEmail" name="tweet" class="form-control" placeholder="Tweet: " required></input>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" role="button">Post</button>
+        {{if .Tweetfail}}
+        <div class="alert alert-danger" role="alert"> Failed to create tweet... </div>
+        {{end}}
+      </form>
+    </div>
+  </div>
+  </body>
+</html>
+<!-- <html>
   <body>
     <h1> POST NEW TWEET</h1>
     <form method="post">
@@ -10,4 +34,4 @@
     <h2> Failed to create tweet </h2>
     {{end}}
   </body>
-</html>
+</html> -->

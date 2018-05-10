@@ -1,5 +1,46 @@
-
 <html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body style="background-color: lightgrey;">
+    <div class="container" style="padding-top: 10%">
+      <div class="col-lg-4 col-lg-offset-4">
+      <form id="loginForm" method="post" class="form-signin">
+        <h3 class="form-signin-heading">TWITTER CLONE - SIGN UP</h3>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+          <input type="email" id="signEmail" name="new_email" class="form-control" placeholder="Email address" required></input>
+        </div>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+          <input type="text" id="signFname" name="new_fname" class="form-control" placeholder="First Name"></input>
+        </div>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+          <input type="text" id="signLname" name="new_lname" class="form-control" placeholder="Last Name"></input>
+        </div>
+        <div class="input-group">
+          <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+          <input type="password" id="signPass" name="new_password" class="form-control" placeholder="Password" required>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" role="button">Sign Up</button>
+        {{if .DuplicateAccount}}
+        <div class="alert alert-danger" role="alert">
+          Duplicate Account. Try again. <a href="/signup">Signup again. </a>
+        </div>
+        {{else if .Success}}
+        <div class="alert alert-success">
+          CONGRATS! ACCOUNT HAS BEEN CREATED. <a href="/">LOGIN.. </a>
+        </div>
+        {{end}}
+      </form>
+    </div>
+  </div>
+  </body>
+</html>
+<!-- <html>
 <body>
 <form id="signupForm" method="post" action="/signup">
 <table style="border: black double 10px; margin: auto; vertical-align: central">
@@ -38,4 +79,4 @@
 </table>
 </form>
 </body>
-</html>
+</html> -->
