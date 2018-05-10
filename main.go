@@ -15,13 +15,13 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	go router.HandleFunc("/", loginHandler)
-	go router.HandleFunc("/cancel", cancelHandler)
-	go router.HandleFunc("/goodbye", goodbyeHandler)
-	go router.HandleFunc("/signup", signupHandler)
-	go router.HandleFunc("/home/{id}", homeHandler)
-	go router.HandleFunc("/home/{id}/tweet", createTweetHandler)
-	go router.HandleFunc("/home/{id}/follow", followFriendHandler)
+	router.HandleFunc("/", loginHandler)
+	router.HandleFunc("/cancel", cancelHandler)
+	router.HandleFunc("/goodbye", goodbyeHandler)
+	router.HandleFunc("/signup", signupHandler)
+	router.HandleFunc("/home/{id}", homeHandler)
+	router.HandleFunc("/home/{id}/tweet", createTweetHandler)
+	router.HandleFunc("/home/{id}/follow", followFriendHandler)
 	http.ListenAndServe(":8000", router)
 }
 

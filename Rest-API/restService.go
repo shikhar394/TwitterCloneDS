@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -29,6 +31,42 @@ type UserTweetList struct {
 	AllTweets []UserTweet
 }
 
+type OperationDetails struct {
+	OperationName string
+	Cmd           []byte
+	ClientEmail   string //Gets email of the client as identifier
+}
+
+type UserTweetReplicate struct {
+	UserID       string
+	UserTweet    string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type FollowUserReplicate struct {
+	UserID       string
+	UserToFollow string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type CancelUserReplicate struct {
+	UserID       string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type CreateUserReplicate struct {
+	Email        string
+	FirstName    string
+	LastName     string
+	Password     string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
 var UserTweetsMap = make(map[string][]UserTweet)
 
 var UserFollower = make(map[string][]string)
@@ -43,6 +81,14 @@ var UserList = list.New() // Only for distributing among servers while making di
 //Users := make(map[Emai])
 // user email to tweet map TODO: add structs
 var tweets []UserTweet
+
+//var OperationLog = make([]OperationDetails)
+
+var OperationLog []OperationDetails
+
+var CommitLog []int //Access the op number from Operation Log
+
+var totalServers = 3
 
 func main() {
 	//add dummy tweet data
@@ -75,10 +121,40 @@ func main() {
 	http.ListenAndServe(":9000", router)
 }
 
+func TestHandlers() *mux.Router {
+	UserMap["abc@gmail.com"] = &User{"abc@gmail.com", "abc", "abc", "abc", nil}
+	UserElementList := sortedInsert(UserMap["abc@gmail.com"])
+	UserMap["abc@gmail.com"].PosInList = UserElementList
+
+	UserMap["abcd@gmail.com"] = &User{"abcd@gmail.com", "abcd", "abcd", "abcd", nil}
+	UserElementList = sortedInsert(UserMap["abcd@gmail.com"])
+	UserMap["abcd@gmail.com"].PosInList = UserElementList
+
+	UserMap["bcd@gmail.com"] = &User{"bcd@gmail.com", "bcd", "bcd", "bcd", nil}
+	UserElementList = sortedInsert(UserMap["bcd@gmail.com"])
+	UserMap["bcd@gmail.com"].PosInList = UserElementList
+
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "first tweet"})
+	UserTweetsMap["abcd@gmail.com"] = append(UserTweetsMap["abcd@gmail.com"], UserTweet{Email: "abcd@gmail.com", Tweet: "second tweet"})
+	UserTweetsMap["abc@gmail.com"] = append(UserTweetsMap["abc@gmail.com"], UserTweet{Email: "abc@gmail.com", Tweet: "third tweet"})
+	UserTweetsMap["bcd@gmail.com"] = append(UserTweetsMap["bcd@gmail.com"], UserTweet{Email: "bcd@gmail.com", Tweet: "fourth tweet"})
+
+	UserFollower["abc@gmail.com"] = append(UserFollower["abc@gmail.com"], "abcd@gmail.com", "bcd@gmail.com")
+	router := mux.NewRouter()
+	router.HandleFunc("/login", loginHandler).Methods("POST")
+	router.HandleFunc("/cancel", cancelHandler).Methods("POST")
+	router.HandleFunc("/signup", signupHandler).Methods("POST")
+	router.HandleFunc("/showTweets", showTweetsHandler).Methods("POST")
+	router.HandleFunc("/createTweet", createTweets).Methods("POST")
+	router.HandleFunc("/followUser", followUser).Methods("POST")
+	return router
+}
+
 func followUser(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	body, e := ioutil.ReadAll(r.Body)
+	count := 0
 	if e == nil {
 		var params map[string]string
 		json.Unmarshal(body, &params)
@@ -88,6 +164,14 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 		_, ok := UserMap[userToFollow]
 		if ok {
 			UserFollower[user] = append(UserFollower[user], userToFollow)
+			//Replicate on backend.
+			jsonData := map[string]FollowUserReplicate{}
+			jsonData["user"] = FollowUserReplicate{user, userToFollow, OperationLog, CommitLog}
+			jsonValue, _ := json.Marshal(jsonData)
+			OperationLog = append(OperationLog, OperationDetails{"followUser", body, user})
+			fmt.Printf("\n FOLLOW LOG \n %v", OperationLog)
+			go replicateData(jsonValue, &count, "/followerReplicate", len(OperationLog))
+			//check if majority appended.
 			result["Success"] = true
 		} else {
 			result["Success"] = false
@@ -107,6 +191,7 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 func createTweets(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
+	count := 0
 	body, e := ioutil.ReadAll(r.Body)
 	if e == nil {
 		var params map[string]string
@@ -116,6 +201,12 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		fmt.Print(user)
 		//make new  Tweet and store in slice
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
+		//Replicate on backend.
+		OperationLog = append(OperationLog, OperationDetails{"createTweets", body, user})
+		jsonData := map[string]UserTweetReplicate{}
+		jsonData["user"] = UserTweetReplicate{user, userTweet, OperationLog, CommitLog}
+		jsonValue, _ := json.Marshal(jsonData)
+		go replicateData(jsonValue, &count, "/tweetReplicate", len(OperationLog))
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -146,7 +237,7 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 			if tweets, ok := UserTweetsMap[follower]; ok {
 				for _, tweet := range tweets {
 					result = append(result, tweet)
-					fmt.Printf("Tweets %v", result)
+					//fmt.Printf("Tweets %v", result)
 				}
 			}
 		}
@@ -156,7 +247,7 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 		// 		result = append(result, UserTweet{Email: tweet.Email, Tweet: tweet.Tweet})
 		// 	}
 		// }
-		fmt.Print(result)
+		//fmt.Print(result)
 		//send data back
 		jData, err := json.Marshal(result)
 		if err != nil {
@@ -172,6 +263,7 @@ func showTweetsHandler(w http.ResponseWriter, r *http.Request) {
 func cancelHandler(w http.ResponseWriter, r *http.Request) {
 	body, e := ioutil.ReadAll(r.Body)
 	var result map[string]bool
+	count := 0
 	result = make(map[string]bool)
 	if e == nil {
 		var params map[string]string
@@ -184,6 +276,13 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 				//remove user
 				UserList.Remove(User.PosInList)
 				delete(UserMap, userEmail)
+				//Replicate on backend.
+				jsonData := map[string]CancelUserReplicate{}
+				jsonData["user"] = CancelUserReplicate{userEmail, userPassword,
+					OperationLog, CommitLog}
+				jsonValue, _ := json.Marshal(jsonData)
+				OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
+				go replicateData(jsonValue, &count, "/deleteUserReplicate", len(OperationLog))
 				result["Success"] = true
 			} else {
 				//fail - do not do anything
@@ -259,6 +358,8 @@ func readUsers() {
 func signupHandler(w http.ResponseWriter, r *http.Request) {
 	body, e := ioutil.ReadAll(r.Body)
 	newUser := new(User)
+	count := 0
+
 	if e == nil {
 		var params map[string]string
 		json.Unmarshal(body, &params)
@@ -277,6 +378,14 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		UserMap[(newUser).Email] = newUser
 		readUsers()
 		//fmt.Print(UserList.Front().Value.(*User).FirstName)map
+		//Replicate on backend.
+		OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
+		jsonData := map[string]CreateUserReplicate{}
+		jsonData["user"] = CreateUserReplicate{newUser.Email, newUser.FirstName, newUser.LastName, newUser.Password, OperationLog, CommitLog}
+		jsonValue, _ := json.Marshal(jsonData)
+		go replicateData(jsonValue, &count, "/userReplicate", len(OperationLog))
+
+		// TODO if majority appends to the log send success to front end.
 		result["Success"] = true
 		result["DuplicateAccount"] = false
 	} else {
@@ -293,4 +402,41 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jData)
 	return
 
+}
+
+func replicateCommitIndex(commitIndex int, OperationNum int) {
+	jsonData := map[string]int{"Commit": commitIndex, "Operation": OperationNum}
+	jsonValue, _ := json.Marshal(jsonData)
+	count := 0
+	go replicateData(jsonValue, &count, "/CommitIndexHandler", -1)
+	return
+}
+
+func replicateData(jsonValue []byte, count *int, handlerName string, opNumber int) {
+	done := make(chan bool)
+	for i := 1; i < totalServers; i++ {
+		go func(i int, count *int) {
+			response, err := http.Post("http://localhost:900"+strconv.Itoa(i)+handlerName, "application/json", bytes.NewBuffer(jsonValue))
+			if err == nil {
+				body, e := ioutil.ReadAll(response.Body)
+				if e == nil {
+					var data map[string]bool
+					json.Unmarshal(body, &data)
+					if data["Success"] == true {
+						*count++
+						done <- true
+					}
+				}
+			}
+		}(i, count)
+	}
+	for i := 0; i < totalServers/2; i++ {
+		<-done
+	}
+	if opNumber > 0 {
+		CommitLog = append(CommitLog, opNumber)
+		replicateCommitIndex(len(CommitLog), opNumber)
+		//fmt.Printf("CommitLog %v \n\n Operation Log %v", CommitLog, OperationLog)
+	}
+	//fmt.Printf("\n\n\nDONE WITH REPLICATIOn %v\n\n\n", *count)
 }
