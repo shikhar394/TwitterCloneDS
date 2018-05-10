@@ -232,13 +232,6 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func fixLogs(PrimaryOperationLog []OperationDetails, PrimaryCommitLog []int) {
-	OperationLog = PrimaryOperationLog[:]
-	CommitLog = PrimaryCommitLog[:]
-	fmt.Printf("Fixing Logs %v\n\n", OperationLog)
-	return
-}
-
 func CommitIndexHandler(w http.ResponseWriter, r *http.Request) {
 	body, e := ioutil.ReadAll(r.Body)
 	var result map[string]bool
@@ -264,4 +257,83 @@ func CommitIndexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jData)
 	return
+}
+
+func fixLogs(PrimaryOperationLog []OperationDetails, PrimaryCommitLog []int) {
+	OperationLog = PrimaryOperationLog[:]
+	CommitLog = PrimaryCommitLog[:]
+	go RecreateLogEvents()
+	fmt.Printf("Fixing Logs %v\n\n", OperationLog)
+	return
+}
+
+func CreateUserFromLog(body []byte) {
+	newUser := new(User)
+	var params map[string]string
+	json.Unmarshal(body, &params)
+	newUser.Email = params["Email"]
+	newUser.FirstName = params["FirstName"]
+	newUser.LastName = params["LastName"]
+	newUser.Password = params["Password"]
+	UserMap[(newUser).Email] = newUser
+	//OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
+	fmt.Printf("UserMap %v\n\n", UserMap)
+	return
+}
+
+func CreateTweetFromLog(body []byte) {
+	var params map[string]string
+	json.Unmarshal(body, &params)
+	user := params["userId"]
+	userTweet := params["userTweet"]
+	fmt.Print(user)
+	//make new  Tweet and store in slice
+	UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
+	//Replicate on backend.
+	//OperationLog = append(OperationLog, OperationDetails{"createTweets", body, user})
+	fmt.Printf("UserTweetMap %v\n\n", UserTweetsMap)
+	return
+}
+
+func FollowUserFromLog(body []byte) {
+	var params map[string]string
+	json.Unmarshal(body, &params)
+	user := params["userId"]
+	userToFollow := params["userToFollow"]
+	UserFollower[user] = append(UserFollower[user], userToFollow)
+	//Replicate on backend.
+	jsonData := map[string]FollowUserReplicate{}
+	jsonData["user"] = FollowUserReplicate{user, userToFollow, OperationLog, CommitLog}
+	//OperationLog = append(OperationLog, OperationDetails{"followUser", body, user})
+	fmt.Printf("UserFollower %v\n\n", UserFollower)
+	return
+}
+
+func CancelUserFromLog(body []byte) {
+	var params map[string]string
+	json.Unmarshal(body, &params)
+	userEmail := params["email"]
+	delete(UserMap, userEmail)
+	fmt.Printf("UserMap %v\n\n", UserMap)
+	//OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
+	return
+}
+
+func RecreateLogEvents() {
+	for i := 0; i < len(OperationLog); i++ {
+		event := OperationLog[i]
+		CmdBody := event.Cmd
+		switch OperationName := event.OperationName; OperationName {
+		case "cancelHandler":
+			go CancelUserFromLog(CmdBody)
+		case "followUser":
+			go FollowUserFromLog(CmdBody)
+		case "createTweets":
+			go CreateTweetFromLog(CmdBody)
+		case "signupHandler":
+			go CreateUserFromLog(CmdBody)
+		default:
+			fmt.Print("Operation Not supported")
+		}
+	}
 }
