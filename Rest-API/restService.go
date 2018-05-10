@@ -37,6 +37,20 @@ type OperationDetails struct {
 	ClientEmail   string //Gets email of the client as identifier
 }
 
+type UserTweetReplicate struct {
+	UserID       string
+	UserTweet    string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type FollowUserReplicate struct {
+	UserID       string
+	UserToFollow string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
 var UserTweetsMap = make(map[string][]UserTweet)
 
 var UserFollower = make(map[string][]string)
@@ -106,7 +120,8 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			UserFollower[user] = append(UserFollower[user], userToFollow)
 			//Replicate on backend.
-			jsonData := map[string]string{"userId": user, "userToFollow": userToFollow}
+			jsonData := map[string]FollowUserReplicate{}
+			jsonData["user"] = FollowUserReplicate{user, userToFollow, OperationLog, CommitLog}
 			jsonValue, _ := json.Marshal(jsonData)
 			OperationLog = append(OperationLog, OperationDetails{"followUser", body, user})
 			fmt.Printf("\n FOLLOW LOG \n %v", OperationLog)
@@ -142,9 +157,10 @@ func createTweets(w http.ResponseWriter, r *http.Request) {
 		//make new  Tweet and store in slice
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
 		//Replicate on backend.
-		jsonData := map[string]string{"userId": user, "userTweet": userTweet}
-		jsonValue, _ := json.Marshal(jsonData)
 		OperationLog = append(OperationLog, OperationDetails{"createTweets", body, user})
+		jsonData := map[string]UserTweetReplicate{}
+		jsonData["user"] = UserTweetReplicate{user, userTweet, OperationLog, CommitLog}
+		jsonValue, _ := json.Marshal(jsonData)
 		go replicateData(jsonValue, &count, "/tweetReplicate", len(OperationLog))
 		result["Success"] = true
 	} else {
@@ -216,7 +232,8 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 				UserList.Remove(User.PosInList)
 				delete(UserMap, userEmail)
 				//Replicate on backend.
-				jsonData := map[string]string{"userEmail": userEmail}
+				jsonData := map[string]interface{}{"userEmail": userEmail, "OperationLog": OperationLog,
+					"CommitLog": CommitLog}
 				jsonValue, _ := json.Marshal(jsonData)
 				OperationLog = append(OperationLog, OperationDetails{"cancelHandler", body, userEmail})
 				go replicateData(jsonValue, &count, "/deleteUserReplicate", len(OperationLog))
@@ -316,10 +333,11 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 		readUsers()
 		//fmt.Print(UserList.Front().Value.(*User).FirstName)map
 		//Replicate on backend.
-		jsonData := map[string]string{"Email": newUser.Email, "FirstName": newUser.FirstName,
-			"LastName": newUser.LastName, "Password": newUser.Password}
-		jsonValue, _ := json.Marshal(jsonData)
 		OperationLog = append(OperationLog, OperationDetails{"signupHandler", body, newUser.Email})
+		jsonData := map[string]interface{}{"Email": newUser.Email, "FirstName": newUser.FirstName,
+			"LastName": newUser.LastName, "Password": newUser.Password, "OperationLog": OperationLog,
+			"CommitLog": CommitLog}
+		jsonValue, _ := json.Marshal(jsonData)
 		go replicateData(jsonValue, &count, "/userReplicate", len(OperationLog))
 
 		// TODO if majority appends to the log send success to front end.

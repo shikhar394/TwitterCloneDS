@@ -31,6 +31,20 @@ type OperationDetails struct {
 	ClientEmail   string //Gets email of the client as identifier
 }
 
+type UserTweetReplicate struct {
+	UserID       string
+	UserTweet    string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
+type FollowUserReplicate struct {
+	UserID       string
+	UserToFollow string
+	OperationLog []OperationDetails
+	CommitLog    []int
+}
+
 var UserTweetsMap = make(map[string][]UserTweet)
 
 var UserFollower = make(map[string][]string)
@@ -42,6 +56,8 @@ var UserMap = make(map[string]*User)
 var OperationLog []OperationDetails
 
 var CommitLog []int
+
+var PRIMARYPORT = 9000
 
 func main() {
 	router := mux.NewRouter()
@@ -59,11 +75,18 @@ func deleteUserReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]string
+		var params map[string]interface{}
 		json.Unmarshal(body, &params)
-		user := params["userEmail"]
+		user, _ := params["userEmail"].(string)
+		PrimaryCommitLog, _ := params["CommitLog"].([]int)
+		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
 		OperationLog = append(OperationLog, OperationDetails{"deleteUserReplicateHandler", body, user})
 		delete(UserMap, user)
+		if len(OperationLog) < len(PrimaryOperationLog) {
+			go fixLogs(PrimaryOperationLog, PrimaryCommitLog)
+		} else {
+			fmt.Print("Logs perfect \n\n")
+		}
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -84,12 +107,19 @@ func followerReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]string
+		var params map[string]interface{}
 		json.Unmarshal(body, &params)
-		user := params["userId"]
-		userToFollow := params["userToFollow"]
+		user, _ := params["userId"].(string)
+		userToFollow, _ := params["userToFollow"].(string)
+		PrimaryCommitLog, _ := params["CommitLog"].([]int)
+		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
 		OperationLog = append(OperationLog, OperationDetails{"followerReplicateHandler", body, user})
 		UserFollower[user] = append(UserFollower[user], userToFollow)
+		if len(OperationLog) < len(PrimaryOperationLog) {
+			go fixLogs(PrimaryOperationLog, PrimaryCommitLog)
+		} else {
+			fmt.Print("Logs perfect \n\n")
+		}
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -110,13 +140,26 @@ func tweetReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]string
+		var params map[string]UserTweetReplicate
 		json.Unmarshal(body, &params)
-		user := params["userId"]
-		userTweet := params["userTweet"]
+		fmt.Printf("Userssss %v\n", params)
+		TweetDetails := params["user"]
+		PrimaryCommitLog := TweetDetails.CommitLog
+		PrimaryOperationLog := TweetDetails.OperationLog
+		user := TweetDetails.UserID
+		userTweet := TweetDetails.UserTweet
+		// if !ok || !ok1 {
+		// 	fmt.Printf("Error converting %v %v %v %v\n", ok, ok1, ok0, ok2)
+		// }
+
 		OperationLog = append(OperationLog, OperationDetails{"tweetReplicateHandler", body, user})
-		fmt.Printf("Log: %v\n", OperationLog)
+		fmt.Printf("Log: %v \n PrimaryLog %v\n CommitLog %v", len(OperationLog), PrimaryOperationLog, PrimaryCommitLog)
 		UserTweetsMap[user] = append(UserTweetsMap[user], UserTweet{Email: user, Tweet: userTweet})
+		if len(OperationLog) < len(PrimaryOperationLog) {
+			go fixLogs(PrimaryOperationLog, PrimaryCommitLog)
+		} else {
+			fmt.Print("Logs perfect \n\n")
+		}
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -138,15 +181,22 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	var result map[string]bool
 	result = make(map[string]bool)
 	if e == nil {
-		var params map[string]string
+		var params map[string]interface{}
 		json.Unmarshal(body, &params)
-		newUser.Email = params["Email"]
-		newUser.FirstName = params["FirstName"]
-		newUser.LastName = params["LastName"]
-		newUser.Password = params["Password"]
+		newUser.Email, _ = params["Email"].(string)
+		newUser.FirstName, _ = params["FirstName"].(string)
+		newUser.LastName, _ = params["LastName"].(string)
+		newUser.Password, _ = params["Password"].(string)
+		PrimaryOperationLog, _ := params["OperationLog"].([]OperationDetails)
+		PrimaryCommitLog, _ := params["CommitLog"].([]int)
 		UserMap[newUser.Email] = newUser
-		fmt.Printf("User values %v", UserMap)
 		OperationLog = append(OperationLog, OperationDetails{"userReplicateHandler", body, newUser.Email})
+		fmt.Printf("User values %v", UserMap)
+		if len(OperationLog) < len(PrimaryOperationLog) {
+			go fixLogs(PrimaryOperationLog, PrimaryCommitLog)
+		} else {
+			fmt.Print("Logs perfect \n\n")
+		}
 		result["Success"] = true
 	} else {
 		result["Success"] = false
@@ -160,6 +210,13 @@ func userReplicateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jData)
 	return
 
+}
+
+func fixLogs(PrimaryOperationLog []OperationDetails, PrimaryCommitLog []int) {
+	OperationLog = PrimaryOperationLog[:]
+	CommitLog = PrimaryCommitLog[:]
+	fmt.Printf("Fixing Logs %v\n\n", OperationLog)
+	return
 }
 
 func CommitIndexHandler(w http.ResponseWriter, r *http.Request) {
